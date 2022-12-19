@@ -16,15 +16,16 @@ GIT_TAG=$(shell git describe --abbrev=0 --tags)
 GIT_TAG_FULL=$(shell git describe --tags)
 OS_NAME=
 
+ifndef ARCHIVE_NAME
+	ARCHIVE_NAME=wgpu
+endif
+
 EXTRA_BUILD_ARGS=
 TARGET_DIR=target
 ifdef TARGET
 	EXTRA_BUILD_ARGS=--target $(TARGET)
 	TARGET_DIR=target/$(TARGET)
-endif
-
-ifndef ARCHIVE_NAME
-	ARCHIVE_NAME=wgpu-$(TARGET)
+	ARCHIVE_NAME=$(ARCHIVE_NAME)-$(TARGET)
 endif
 
 ifeq ($(OS),Windows_NT)
