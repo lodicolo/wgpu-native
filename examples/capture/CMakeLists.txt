@@ -19,12 +19,22 @@ else(MSVC)
     target_compile_options(${TARGET_NAME} PRIVATE -Wall -Wextra -pedantic)
 endif(MSVC)
 
+string(TOLOWER "${CMAKE_BUILD_TYPE}" __BUILD_TYPE_DIRECTORY_NAME)
+
+set(__TARGET_DIRECTORY_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../target")
+
+if(TARGET_TRIPLE)
+    set(__TARGET_DIRECTORY_PATH "${__TARGET_DIRECTORY_PATH}/${TARGET_TRIPLE}")
+endif(TARGET_TRIPLE)
+
+set(__TARGET_DIRECTORY_PATH "${__TARGET_DIRECTORY_PATH}//${__BUILD_TYPE_DIRECTORY_NAME}")
+
 find_library(WGPU_LIBRARY wgpu_native
-    HINTS "${CMAKE_CURRENT_SOURCE_DIR}/../../target/debug"
+    HINTS "${__TARGET_DIRECTORY_PATH}"
 )
 
 find_library(HELPER_LIBRARY helper
-    HINTS "${CMAKE_CURRENT_SOURCE_DIR}/../../target/debug"
+    HINTS "${__TARGET_DIRECTORY_PATH}"
 )
 
 target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ffi)
