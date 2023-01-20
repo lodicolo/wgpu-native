@@ -4,28 +4,18 @@ macro(wgpu_native_setup_example)
     cmake_parse_arguments(
         EXAMPLE
         ""
-        "PROJECT;TARGET"
+        "TARGET"
         "SOURCES;EXTERNAL_DEPENDENCIES;BUILT_DEPENDENCIES"
         ${ARGN}
     )
 
-    if (${EXAMPLE_PROJECT} STREQUAL "")
-        if (${EXAMPLE_TARGET} STREQUAL "")
-            message(FATAL_ERROR "wgpu_native_setup_example() cannot be invoked without setting at least PROJECT or TARGET.")
-        endif()
-
-        set(EXAMPLE_PROJECT "${EXAMPLE_TARGET}")
-    else()
-        if (${EXAMPLE_TARGET} STREQUAL "")
-            set(EXAMPLE_TARGET "${EXAMPLE_PROJECT}")
-        endif()
+    if (${EXAMPLE_TARGET} STREQUAL "")
+        set(EXAMPLE_TARGET "${EXAMPLE_PROJECT}")
     endif()
 
     if (${EXAMPLE_SOURCES} STREQUAL "")
         message(FATAL_ERROR "wgpu_native_setup_example() needs to be called with at least one entry in SOURCES")
     endif()
-
-    project(${EXAMPLE_PROJECT})
 
     add_executable(${EXAMPLE_TARGET} ${EXAMPLE_SOURCES} ../framework.c)
 
