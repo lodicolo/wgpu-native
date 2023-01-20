@@ -95,19 +95,25 @@ lib-native-release: Cargo.lock Cargo.toml Makefile $(WILDCARD_SOURCE)
 	cargo build --release $(EXTRA_BUILD_ARGS)
 
 example-compute: lib-native examples/compute/main.c
-	cd examples/compute && $(CREATE_BUILD_DIR) && cd build && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .. $(GENERATOR_PLATFORM) $(TARGET_TRIPLE) && cmake --build .
+	cd examples/compute && $(CREATE_BUILD_DIR) && cd build && cmake -DCMAKE_TOOLCHAIN_FILE=$(CMAKE_TOOLCHAIN_FILE) -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .. $(GENERATOR_PLATFORM) $(TARGET_TRIPLE) && cmake --build .
 
 run-example-compute: example-compute
 	cd examples/compute && "$(OUTPUT_DIR)/compute" 1 2 3 4
 
-example-triangle: lib-native examples/triangle/main.c
-	cd examples/triangle && $(CREATE_BUILD_DIR) && cd build && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .. $(GENERATOR_PLATFORM) $(TARGET_TRIPLE) && cmake --build .
+clean-examples:
+	rm -Rf examples/*/build
+
+clean-triangle:
+	rm -Rf examples/triangle/build
+
+example-triangle: lib-native clean-triangle examples/triangle/main.c
+	cd examples/triangle && $(CREATE_BUILD_DIR) && cd build && cmake -DCMAKE_TOOLCHAIN_FILE=$(CMAKE_TOOLCHAIN_FILE) -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .. $(GENERATOR_PLATFORM) $(TARGET_TRIPLE) && cmake --build .
 
 run-example-triangle: example-triangle
 	cd examples/triangle && "$(OUTPUT_DIR)/triangle"
 
-example-triangle-release: lib-native-release examples/triangle/main.c
-	cd examples/triangle && $(CREATE_BUILD_DIR) && cd build && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .. $(GENERATOR_PLATFORM) $(TARGET_TRIPLE) && cmake --build .
+example-triangle-release: lib-native-release clean-triangle examples/triangle/main.c
+	cd examples/triangle && $(CREATE_BUILD_DIR) && cd build && cmake -DCMAKE_TOOLCHAIN_FILE=$(CMAKE_TOOLCHAIN_FILE) -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .. $(GENERATOR_PLATFORM) $(TARGET_TRIPLE) && cmake --build .
 
 run-example-triangle-release: example-triangle-release
 	cd examples/triangle && "$(OUTPUT_DIR)/triangle"
@@ -116,7 +122,7 @@ build-helper:
 	cargo build -p helper $(EXTRA_BUILD_ARGS)
 
 example-capture: lib-native build-helper examples/capture/main.c
-	cd examples/capture && $(CREATE_BUILD_DIR) && cd build && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .. $(GENERATOR_PLATFORM) $(TARGET_TRIPLE) && cmake --build .
+	cd examples/capture && $(CREATE_BUILD_DIR) && cd build && cmake -DCMAKE_TOOLCHAIN_FILE=$(CMAKE_TOOLCHAIN_FILE) -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .. $(GENERATOR_PLATFORM) $(TARGET_TRIPLE) && cmake --build .
 
 run-example-capture: example-capture
 	cd examples/capture && "$(OUTPUT_DIR)/capture"
