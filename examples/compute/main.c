@@ -141,6 +141,7 @@ int main(int argc, char *argv[]) {
   uint32_t *times =
       (uint32_t *)wgpuBufferGetMappedRange(stagingBuffer, 0, numbersSize);
 
+  // Should print 0, 1, 7, 2(?)
   printf("Times: [%d, %d, %d, %d]\n", times[0], times[1], times[2], times[3]);
 
   wgpuBufferUnmap(stagingBuffer);
