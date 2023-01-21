@@ -1,23 +1,24 @@
 cmake_minimum_required(VERSION 3.11b)
 
-function(clean_build_type INPUT_TYPE OUTPUT_TYPE)
-    string(TOLOWER "${INPUT_TYPE}" OUTPUT_TYPE)
-    if(OUTPUT_TYPE STREQUAL "minsizerel")
-        set(OUTPUT_TYPE "MinSizeRel")
-    elseif(OUTPUT_TYPE STREQUAL "release")
-        set(OUTPUT_TYPE "Release")
-    elseif(OUTPUT_TYPE STREQUAL "relwithdebinfo")
-        set(OUTPUT_TYPE "RelWithDebInfo")
-    elseif(NOT OUTPUT_TYPE STREQUAL "" AND NOT OUTPUT_TYPE STREQUAL "debug")
+macro(clean_build_type)
+    string(TOLOWER "${CMAKE_BUILD_TYPE}" __INTERMEDIATE_CMAKE_BUILD_TYPE)
+    if(__INTERMEDIATE_CMAKE_BUILD_TYPE STREQUAL "minsizerel")
+        set(CMAKE_BUILD_TYPE "MinSizeRel")
+    elseif(__INTERMEDIATE_CMAKE_BUILD_TYPE STREQUAL "release")
+        set(CMAKE_BUILD_TYPE "Release")
+    elseif(__INTERMEDIATE_CMAKE_BUILD_TYPE STREQUAL "relwithdebinfo")
+        set(CMAKE_BUILD_TYPE "RelWithDebInfo")
+    elseif(NOT __INTERMEDIATE_CMAKE_BUILD_TYPE STREQUAL "" AND NOT __INTERMEDIATE_CMAKE_BUILD_TYPE STREQUAL "debug")
+        message(WARNING "CMAKE_BUILD_TYPE set to unrecognized build type '${CMAKE_BUILD_TYPE}', not cleaning case.")
         return()
     else()
-        if(OUTPUT_TYPE STREQUAL "")
+        if(__INTERMEDIATE_CMAKE_BUILD_TYPE STREQUAL "")
             message(WARNING "CMAKE_BUILD_TYPE set to empty string, falling back to 'Debug'.")
         endif()
 
-        set(OUTPUT_TYPE "Debug")
+        set(CMAKE_BUILD_TYPE "Debug")
     endif()
-endfunction(clean_build_type)
+endmacro(clean_build_type)
 
 macro(wgpu_native_setup_example)
     cmake_parse_arguments(
@@ -28,7 +29,7 @@ macro(wgpu_native_setup_example)
         ${ARGN}
     )
 
-    clean_build_type(CMAKE_BUILD_TYPE CMAKE_BUILD_TYPE)
+    clean_build_type()
 
     message(STATUS "Configuring '${CMAKE_PROJECT_NAME}' for compilation in '${CMAKE_BUILD_TYPE}' mode...")
 
