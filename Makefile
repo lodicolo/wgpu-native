@@ -18,47 +18,57 @@ OS_NAME=
 EXTRA_BUILD_ARGS=
 TARGET_DIR=target
 ifdef TARGET
-	EXTRA_BUILD_ARGS=--target $(TARGET)
-	TARGET_DIR=target/$(TARGET)
-	TARGET_TRIPLE=-DTARGET_TRIPLE=$(TARGET)
+    EXTRA_BUILD_ARGS=--target $(TARGET)
+    TARGET_DIR=target/$(TARGET)
+    TARGET_TRIPLE=-DTARGET_TRIPLE=$(TARGET)
 endif
 
 ifndef ARCHIVE_NAME
-	ARCHIVE_NAME=wgpu-$(TARGET)
+    ARCHIVE_NAME=wgpu-$(TARGET)
 endif
 
 ifeq ($(OS),Windows_NT)
-	# '-Force' ignores error if folder already exists
-	CREATE_BUILD_DIR=powershell -Command md $(BUILD_DIR) -Force
-	GENERATOR_PLATFORM=-DCMAKE_GENERATOR_PLATFORM=x64
-	OUTPUT_DIR=build/Debug
+    # '-Force' ignores error if folder already exists
+    CREATE_BUILD_DIR=powershell -Command md $(BUILD_DIR) -Force
+    GENERATOR_PLATFORM=-DCMAKE_GENERATOR_PLATFORM=x64
+    OUTPUT_DIR=build/Debug
 else
-	CREATE_BUILD_DIR=mkdir -p $(BUILD_DIR)
-	OUTPUT_DIR=build
+    CREATE_BUILD_DIR=mkdir -p $(BUILD_DIR)
+    OUTPUT_DIR=build
 endif
 
 ifeq ($(OS),Windows_NT)
-	OS_NAME=windows
+    OS_NAME=windows
 else
-	UNAME_S:=$(shell uname -s)
-	ifeq ($(UNAME_S),Linux)
-		OS_NAME=linux
-	endif
-	ifeq ($(UNAME_S),Darwin)
-		OS_NAME=macos
-	endif
+    UNAME_S:=$(shell uname -s)
+    ifeq ($(UNAME_S),Linux)
+        OS_NAME=linux
+    endif
+    ifeq ($(UNAME_S),Darwin)
+        OS_NAME=macos
+    endif
 endif
 
-.PHONY: all check test doc clear \
-	example-compute example-triangle \
-	run-example-compute run-example-triangle  \
-	lib-native lib-native-release
+sanitize-target = "$(word 3,$1) $(if $(word 4,$1),$(word 4,$1),"debug")"
 
-all: example-compute example-triangle example-capture
+.PHONY: \
+	all \
+	package \
+	clean clean-cargo clean-examples \
+	check \
+	doc \
+	test \
+	wgpu-native wgpu-native-debug wgpu-native-release \
+	helper helper-debug helper-release
 
-package: lib-native lib-native-release
+all:
+	make example-build capture && \
+	make example-build compute && \
+	make example-build triangle
+
+package: wgpu-native
 	mkdir -p dist
-	echo "$(GIT_TAG_FULL)" > dist/commit-sha
+	@echo "$(GIT_TAG_FULL)" > dist/commit-sha
 	for RELEASE in debug release; do \
 		ARCHIVE=$(ARCHIVE_NAME)-$$RELEASE.zip; \
 		LIBDIR=$(TARGET_DIR)/$$RELEASE; \
@@ -72,57 +82,62 @@ package: lib-native lib-native-release
 		rm wgpu.h ;\
 	done
 
-clean:
-	cargo clean
-	rm -Rf examples/compute/build examples/triangle/build
-
-check:
-	cargo check --all
-
-test:
-	cargo test --all
-
-doc:
-	cargo doc --all
-
-clear:
-	cargo clean
-
-lib-native: Cargo.lock Cargo.toml Makefile $(WILDCARD_SOURCE)
-	cargo build $(EXTRA_BUILD_ARGS)
-
-lib-native-release: Cargo.lock Cargo.toml Makefile $(WILDCARD_SOURCE)
-	cargo build --release $(EXTRA_BUILD_ARGS)
-
-example-compute: lib-native examples/compute/main.c
-	cd examples/compute && $(CREATE_BUILD_DIR) && cd build && cmake -DCMAKE_TOOLCHAIN_FILE=$(CMAKE_TOOLCHAIN_FILE) -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .. $(GENERATOR_PLATFORM) $(TARGET_TRIPLE) && cmake --build .
-
-run-example-compute: example-compute
-	cd examples/compute && "$(OUTPUT_DIR)/compute" 1 2 3 4
+clean: clean-cargo clean-examples
+	@echo "Cleaned all files"
 
 clean-examples:
 	rm -Rf examples/*/build
 
-clean-triangle:
-	rm -Rf examples/triangle/build
+clean-cargo:
+	cargo clean
 
-example-triangle: lib-native clean-triangle examples/triangle/main.c
-	cd examples/triangle && $(CREATE_BUILD_DIR) && cd build && cmake -DCMAKE_TOOLCHAIN_FILE=$(CMAKE_TOOLCHAIN_FILE) -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .. $(GENERATOR_PLATFORM) $(TARGET_TRIPLE) && cmake --build .
+check:
+	cargo check --all
 
-run-example-triangle: example-triangle
-	cd examples/triangle && "$(OUTPUT_DIR)/triangle"
+doc:
+	cargo doc --all
 
-example-triangle-release: lib-native-release clean-triangle examples/triangle/main.c
-	cd examples/triangle && $(CREATE_BUILD_DIR) && cd build && cmake -DCMAKE_TOOLCHAIN_FILE=$(CMAKE_TOOLCHAIN_FILE) -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .. $(GENERATOR_PLATFORM) $(TARGET_TRIPLE) && cmake --build .
+test:
+	cargo test --all
 
-run-example-triangle-release: example-triangle-release
-	cd examples/triangle && "$(OUTPUT_DIR)/triangle"
+wgpu-native: wgpu-native-debug wgpu-native-release
 
-build-helper:
+wgpu-native-debug: Cargo.lock Cargo.toml Makefile $(WILDCARD_SOURCE)
+	cargo build $(EXTRA_BUILD_ARGS)
+
+wgpu-native-release: Cargo.lock Cargo.toml Makefile $(WILDCARD_SOURCE)
+
+helper: helper-debug helper-release
+
+helper-debug:
 	cargo build -p helper $(EXTRA_BUILD_ARGS)
 
-example-capture: lib-native build-helper examples/capture/main.c
-	cd examples/capture && $(CREATE_BUILD_DIR) && cd build && cmake -DCMAKE_TOOLCHAIN_FILE=$(CMAKE_TOOLCHAIN_FILE) -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .. $(GENERATOR_PLATFORM) $(TARGET_TRIPLE) && cmake --build .
+helper-release:
+	cargo build -p helper --release $(EXTRA_BUILD_ARGS)
+	cargo build --release $(EXTRA_BUILD_ARGS)
 
-run-example-capture: example-capture
-	cd examples/capture && "$(OUTPUT_DIR)/capture"
+example-clean-%:
+	@echo "Cleaning example '$(firstword $(subst -, ,$*))'..."
+	rm -Rf examples/$(EXAMPLE_NAME)/build
+
+example-build-%:
+    CURRENT_EXAMPLE_TARGET_GOAL = "$(call sanitize-target,$(subst -, ,$@))"
+    CURRENT_EXAMPLE_TARGET = "$(firstword $(CURRENT_EXAMPLE_TARGET_GOAL))"
+    CURRENT_EXAMPLE_BUILD_TYPE = "$(word 2,$(CURRENT_EXAMPLE_TARGET_GOAL))"
+example-build-%: example-clean-% wgpu-native helper
+	@echo "Building example '$(CURRENT_EXAMPLE_TARGET)' in '$(CURRENT_EXAMPLE_BUILD_TYPE)' mode..."
+	cd examples/$(CURRENT_EXAMPLE_TARGET) && \
+	$(CREATE_BUILD_DIR) && \
+	cd build && \
+	cmake ..  -DCMAKE_TOOLCHAIN_FILE=$(CMAKE_TOOLCHAIN_FILE) -DCMAKE_BUILD_TYPE=$(CURRENT_EXAMPLE_BUILD_TYPE) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 $(GENERATOR_PLATFORM) $(TARGET_TRIPLE) && \
+	cmake --build .
+
+example-run-%:
+    CURRENT_EXAMPLE_TARGET_GOAL = "$(call sanitize-target,$(subst -, ,$@))"
+    CURRENT_EXAMPLE_TARGET = "$(firstword $(CURRENT_EXAMPLE_TARGET_GOAL))"
+    CURRENT_EXAMPLE_BUILD_TYPE = "$(word 2,$(CURRENT_EXAMPLE_TARGET_GOAL))"
+example-run-%: example-build-%
+	@echo "Running example '$(firstword $(subst -, ,$*))'..."
+	@echo "MAKECMDGOALS=$(MAKECMDGOALS) -- dummy=$(dummy)"
+	cd examples/$(CURRENT_EXAMPLE_TARGET) && \
+	"$(OUTPUT_DIR)/$(CURRENT_EXAMPLE_TARGET)"
