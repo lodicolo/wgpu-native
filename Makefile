@@ -106,6 +106,7 @@ wgpu-native-debug: Cargo.lock Cargo.toml Makefile $(WILDCARD_SOURCE)
 	cargo build $(EXTRA_BUILD_ARGS)
 
 wgpu-native-release: Cargo.lock Cargo.toml Makefile $(WILDCARD_SOURCE)
+	cargo build --release $(EXTRA_BUILD_ARGS)
 
 helper: helper-debug helper-release
 
